@@ -19,25 +19,39 @@ class CommentSerializer(serializers.ModelSerializer):
 
 class PostSerializer(serializers.ModelSerializer):
     author = serializers.StringRelatedField(read_only=True)
-
-    categories = serializers.SlugRelatedField(
-        many=True,
-        slug_field='name',
-        queryset=Category.objects.all()
-    )
-    tags = serializers.SlugRelatedField(
-        many=True,
-        slug_field='name',
-        queryset=Tag.objects.all()
-    )
+    categories = serializers.ListField(child=serializers.CharField(), write_only=True)
+    tags = serializers.ListField(child=serializers.CharField(), write_only=True)
 
     class Meta:
         model = Post
         fields = ['id', 'title', 'content', 'author', 'created_at', 'updated_at', 'categories', 'tags']
+
+    def create(self, validated_data):
+        request = self.context.get('request')
+        user = request.user if request else None
         
-        def create(self, validated_data):
-            # Automatically set the author to the current logged-in user
-            request = self.context.get('request')
-            user = request.user if request else None
-            validated_data['author'] = user
-            return super().create(validated_data)
+        # Remove categories and tags from validated_data
+        categories_data = validated_data.pop('categories', [])
+        tags_data = validated_data.pop('tags', [])
+        
+        # Remove the author field from validated_data if it exists
+        validated_data.pop('author', None)
+
+        # Create the post with the rest of the validated data
+        post = Post.objects.create(author=user, **validated_data)
+        
+        # Handle categories
+        categories = []
+        for category_name in categories_data:
+            category, created = Category.objects.get_or_create(name=category_name)
+            categories.append(category)
+        post.categories.set(categories)
+
+        # Handle tags
+        tags = []
+        for tag_name in tags_data:
+            tag, created = Tag.objects.get_or_create(name=tag_name)
+            tags.append(tag)
+        post.tags.set(tags)
+
+        return post
