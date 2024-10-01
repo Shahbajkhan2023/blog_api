@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Post</title>
+    <!-- jQuery CDN Include -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+    <h1>Create a New Post</h1>
+    
+    <form id="post-create-form" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}  <!-- Render the form fields here -->
+        <button type="submit">Create Post</button>
+    </form>
+
+    <a href="{% url 'home' %}">Back to Home</a>
+
+    <script>
+        $(document).ready(function() {
+            $('#post-create-form').on('submit', function(event) {
+                event.preventDefault();  // Prevent the default form submission
+                
+                $.ajax({
+                    type: 'POST',
+                    url: '{% url "post_create" %}',  // Adjust this URL to your actual post creation URL
+                    data: new FormData(this),  // Serialize the form data, including files
+                    processData: false,  // Don't process the data
+                    contentType: false,  // Don't set content type
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);  // Show success message
+                            window.location.href = "{% url 'home' %}";  // Redirect to home
+                        } else {
+                            // Show validation errors
+                            for (const [field, errors] of Object.entries(response.errors)) {
+                                alert(`${field}: ${errors.join(", ")}`);  // Display field-wise errors
+                            }
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('An error occurred. Please try again.');  // General error message
+                    }
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>

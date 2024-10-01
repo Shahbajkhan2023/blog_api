@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Homepage</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+    <!-- jQuery CDN Include -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <main>
+        <li><a href="{% url 'post_create' %}">Create Post</a></li>
+        <!-- home related html -->
+        <section class="recent-posts">
+            <h2>Recent Posts</h2>
+            <div class="posts-grid">
+                {% for post in recent_posts %}
+                <article class="post">
+                    <img src="{{ post.image.url }}" alt="{{ post.title }}">
+                    <h3><a href="{% url 'post_detail' post.id %}">{{ post.title }}</a></h3>
+                    <p>{{ post.excerpt }}</p>
+                </article>
+                {% empty %}
+                <p>No recent posts available.</p>
+                {% endfor %}
+            </div>
+        </section>
+
+        <aside class="sidebar">
+            {% if user_profile %}
+            <div class="user-profile">
+                <h3>User Profile</h3>
+                <img src="" alt="Profile Image" class="profile-image">
+                <p>{{ user_profile.user.username }}</p>
+            </div>
+            {% else %}
+            <div class="user-profile">
+                <p>Please log in to see your profile.</p>
+            </div>
+            {% endif %}
+        </aside>
+
+        <!-- profile update html -->
+        {% if user_profile %}
+        <h1>Update Profile</h1>
+        <form id="profile-update-form" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Update Profile</button>
+        </form>
+        {% endif %}
+    </main>
+
+    <footer>
+        <p>&copy; 2024 My Blog. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        $(document).ready(function() {
+            // CSRF token ko AJAX requests mein include karna
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'  // CSRF token ko include karna
+                }
+            });
+
+            $('#profile-update-form').on('submit', function(event) {
+                event.preventDefault();  // Default form submission ko roke
+                $.ajax({
+                    type: 'POST',
+                    url: '{% url "profile_update" %}',  // URL ko map kiya gaya
+                    data: $(this).serialize(),  // Form data ko serialize kiya
+                    success: function(response) {
+                        if (response.success) {
+                            alert(response.message);  // Success message
+                        } else {
+                            // Errors ko dikhana
+                            for (const [field, errors] of Object.entries(response.errors)) {
+                                alert(`${field}: ${errors.join(", ")}`);  // Field-wise errors
+                            }
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('An error occurred. Please try again.');  // General error message
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
